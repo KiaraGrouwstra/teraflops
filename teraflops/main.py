@@ -118,15 +118,16 @@ class App:
 
     # if we already have a cached .tf.json file don't bother generating one
     if self.config == '.' and os.path.isfile(tf_cache_file):
+      with contextlib.suppress(FileNotFoundError):
+        os.remove('main.tf.json')
       shutil.copy(tf_cache_file, 'main.tf.json')
 
       process = subprocess.run([self.terraform, 'show', '-json'], stdout=subprocess.PIPE, check=True)
       data = json.loads(process.stdout)
-
-      with contextlib.suppress(FileNotFoundError):
-        os.remove('main.tf.json')
     else:
-      with tempfile.NamedTemporaryFile(mode='w', dir=os.getcwd(), prefix='teraflops', suffix='.tf.json') as fp:
+      with contextlib.suppress(FileNotFoundError):
+          os.remove('main.tf.json')
+      with open('main.tf.json', 'w') as fp:
         # generate a minimal .tf.json file which can be used to run 'terraform show -json'
         subprocess.run(['nix-instantiate', '--eval', '--json', '--strict', '--read-write-mode', self.generate_bootstrap_nix()], stdout=fp, check=True)
 
@@ -259,9 +260,13 @@ class App:
         data['resource']['terraform_data']['teraflops-arguments'].setdefault('input', dict())
         data['resource']['terraform_data']['teraflops-arguments']['input'] = self.teraflops_arguments
 
+        with contextlib.suppress(FileNotFoundError):
+            os.remove('main.tf.json')
         with open('main.tf.json', 'w') as fp:
           json.dump(data, fp, indent=2)
       else:
+        with contextlib.suppress(FileNotFoundError):
+            os.remove('main.tf.json')
         shutil.copy(tf_cache_file, 'main.tf.json')
       return
 
@@ -272,6 +277,8 @@ class App:
       cmd += ['--show-trace']
     cmd += ['--out-link', 'main.tf.json', self.generate_terraform_nix()]
 
+    with contextlib.suppress(FileNotFoundError):
+        os.remove('main.tf.json')
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     if self.config == '.':
@@ -284,9 +291,6 @@ class App:
       self.generate_main_tf_json(refresh=False)
 
     process = subprocess.run([self.terraform, 'output', '-json', 'teraflops'], capture_output=True)
-
-    with contextlib.suppress(FileNotFoundError):
-      os.remove('main.tf.json')
 
     try:
       output = json.loads(process.stdout)
@@ -325,7 +329,8 @@ class App:
     if args.upgrade:
       cmd += ['-upgrade']
 
-    with tempfile.NamedTemporaryFile(mode='w', dir=os.getcwd(), prefix='teraflops', suffix='.tf.json') as fp:
+      with contextlib.suppress(FileNotFoundError):
+        os.remove('main.tf.json')
       # generate a minimal .tf.json file which can be used to run 'terraform init'
       subprocess.run(['nix-instantiate', '--eval', '--json', '--strict', '--read-write-mode', self.generate_bootstrap_nix()], stdout=fp, check=True)
       subprocess.run(cmd, check=True)
@@ -339,9 +344,6 @@ class App:
     # if nix_version.at_least(2, 10):
     #   repl_cmd.arg("--file");
     cmd += [self.generate_repl_nix()]
-
-    with contextlib.suppress(FileNotFoundError):
-      os.remove('main.tf.json')
 
     subprocess.run(cmd, check=True)
 
@@ -886,9 +888,6 @@ class App:
         args.func(args)
       except subprocess.CalledProcessError as e:
         sys.exit(e.returncode)
-      finally:
-        with contextlib.suppress(FileNotFoundError):
-          os.remove('main.tf.json')
     else:
       # if no subcommand is provided, print help
       parser.print_help()
