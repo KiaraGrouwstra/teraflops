@@ -46,13 +46,13 @@ in
       boot.initrd.kernelModules = [ "nvme" ];
 
       fileSystems = mkMerge [
-        (remoteCfg.fileSystems or {})
         {
           "/" = {
             fsType = "ext4";
             device = "/dev/sda1";
           };
         }
+        (remoteCfg.fileSystems or {})
       ];
 
       networking.defaultGateway = "172.31.1.1";
