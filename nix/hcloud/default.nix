@@ -47,7 +47,7 @@ in
 
       fileSystems = mkMerge [
         {
-          "/" = {
+          "/" = lib.mkDefault {
             fsType = "ext4";
             device = "/dev/sda1";
           };
